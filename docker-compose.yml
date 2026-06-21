@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # 1. Laravel Application Engine (PHP + Node)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: saas_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/var/www/html
+    networks:
+      - saas_network
+    depends_on:
+      - mysql
+
+  # 2. Nginx Web Server Router
+  nginx:
+    image: nginx:alpine
+    container_name: saas_nginx
+    restart: unless-stopped
+    ports:
+      - "4000:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - saas_network
+    depends_on:
+      - app
+
+  # 3. Centralized MySQL Server (Holds Landlord & Tenant DBs)
+  mysql:
+    image: mysql:8.0
+    container_name: saas_mysql
+    restart: unless-stopped
+    ports:
+      - "3304:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: saas_landlord # Default master DB
+    volumes:
+      - saas_mysql_data:/var/lib/mysql
+    networks:
+      - saas_network
+
+  # 4. phpMyAdmin Database GUI Canvas
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: saas_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "4001:80"
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: rootpassword
+    networks:
+      - saas_network
+    depends_on:
+      - mysql
+
+volumes:
+  saas_mysql_data:
+
+networks:
+  saas_network:
+    driver: bridge
