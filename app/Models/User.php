@@ -47,4 +47,11 @@ class User extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
+
+    public function getConnectionName()
+    {
+        // If Spatie has found and set a current tenant, use the 'tenant' connection.
+        // Otherwise, fall back to the default central 'mysql' landlord connection.
+        return app()->has('currentTenant') ? 'tenant' : 'mysql';
+    }
 }

@@ -2,8 +2,21 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WorkspaceController;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession;
+use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
+use Spatie\Multitenancy\Models\Tenant;
+
 // use Illuminate\Support\Facades\Artisan;
 // use Spatie\Multitenancy\Models\Tenant;
+
+// dd([
+//     'current_host' => request()->getHost(),
+//     'database_being_used' => DB::connection()->getDatabaseName(),
+//     'tenant_record_exists' => \Spatie\Multitenancy\Models\Tenant::where('domain', request()->getHost())->exists(),
+//     'all_registered_domains' => Tenant::pluck('domain')->toArray(),
+// ]);
 
 Route::inertia('/', 'welcome')->name('home');
 
@@ -17,16 +30,16 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
-// Route::get('/test', function () {
-//     $tenant = Tenant::find(2);
 
-//     $tenant->makeCurrent();
 
-//     Artisan::call('migrate', [
-//         '--database' => 'tenant',
-//         '--path' => 'database/migrations/tenant',
-//         '--force' => true,
-//     ]);
+Route::middleware([
+    NeedsTenant::class,
+    EnsureValidTenantSession::class
+])->group(function () {
 
-// });
+    Route::get('/dude', function () {
+        dd(User::all());
+    });
+});
+
 require __DIR__ . '/settings.php';

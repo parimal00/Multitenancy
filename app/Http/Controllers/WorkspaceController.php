@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CreateTenantRequest;
 use Illuminate\Http\Request;
 use App\Services\TenantService;
 use Inertia\Inertia;
@@ -15,27 +16,20 @@ class WorkspaceController extends Controller
         $this->tenantService = $tenantService;
     }
 
-    // Render the React Form
     public function create()
     {
         return Inertia::render('Workspace/Create');
     }
 
-    // Handle the Form Submission
-    public function store(Request $request)
+    public function store(CreateTenantRequest $request)
     {
-        $request->validate([
-            'company_name' => 'required|string|max:255',
-            'subdomain' => 'required|string|alpha_dash|unique:tenants,domain|max:50',
-        ]);
+        $data = $request->validated();
 
-        // Provision database and register tenant
         $tenant = $this->tenantService->createTenant(
-            $request->company_name,
-            $request->subdomain
+            $data['company_name'],
+            $data['subdomain']
         );
 
-        // Redirect the user to their brand new dynamic subdomain dashboard!
         return Inertia::location('http://' . $tenant->domain . '/dashboard');
     }
 }
