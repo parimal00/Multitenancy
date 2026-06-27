@@ -63,8 +63,20 @@ services:
     depends_on:
       - mysql
 
+  # 5. High-Speed Memory Buffer (Redis)
+  redis:
+    image: redis:alpine
+    container_name: saas_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - saas_network
+    volumes:
+      - saas_redis_data:/data
 volumes:
   saas_mysql_data:
+  saas_redis_data:
 
 networks:
   saas_network:
