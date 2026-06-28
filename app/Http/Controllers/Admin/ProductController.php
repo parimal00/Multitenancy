@@ -14,13 +14,9 @@ class ProductController extends Controller
     // Render the dashboard data payload
     public function index()
     {
-        // config(['database.default' => 'tenant']);
-        // DB::purge('tenant');
-        // DB::reconnect('tenant');
         $tenantId = app('currentTenant')->id;
 
         $products = Product::latest()->get()->map(function ($product) use ($tenantId) {
-            // Read active memory metrics directly from Redis cache line to send to React UI
             $redisStock = 0;
             if ($product->is_flash_sale) {
                 $redisStock = (int) Redis::get("tenant:{$tenantId}:product:{$product->id}:stock") ?? 0;
@@ -43,15 +39,27 @@ class ProductController extends Controller
 
     public function flashSalesIndex()
     {
+        $tenantId = app('currentTenant')->id;
         $flashProducts = Product::where('is_flash_sale', true)
             ->where('flash_sale_stock', '>', 0)
             ->get()
-            ->map(function ($product) {
+            ->map(function ($product) use ($tenantId) {
+                $redisKey = "tenant:{$tenantId}:product:{$product->id}:stock";
+
+                $realTimeStock = Redis::get($redisKey);
+
+                if ($realTimeStock === null) {
+                    $realTimeStock = $product->flash_sale_stock;
+                    Redis::set($redisKey, $realTimeStock);
+                }
+
+                $realTimeStock = 20;
+
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
                     'price' => (float) ($product->price_cents / 100),
-                    'flash_sale_stock' => $product->flash_sale_stock,
+                    'flash_sale_stock' => $realTimeStock,
                 ];
             });
 

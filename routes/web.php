@@ -52,13 +52,6 @@ Route::middleware([
     Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products.index');
     Route::post('/admin/products', [AdminProductController::class, 'store']);
 
-    Route::get('/flash-sale', function () {
-        $product = Product::find(1);
-        return Inertia::render('Tenant/FlashSale', [
-            'product' => $product
-        ]);
-    });
-
     Route::get('/flash-sales', [AdminProductController::class, 'flashSalesIndex'])->name('admin.flash-sales.index');
 
     // The API endpoint remains targeted to your Redis processor
