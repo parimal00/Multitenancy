@@ -7,6 +7,8 @@ use App\Models\Product;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Spatie\Multitenancy\Jobs\TenantAware;
 use Spatie\Multitenancy\Models\Tenant;
 
@@ -32,21 +34,35 @@ class ProcessFlashSaleOrder implements ShouldQueue, TenantAware
         $tenant = Tenant::find($this->tenantId);
         $tenant->makeCurrent();
 
-        Order::where('id', $this->orderId)->get();
-
-        DB::transaction(function () {
+        $stockWasDecremented = DB::transaction(function () {
             $affectedRows = Product::where('id', $this->productId)
-                ->where('stock', '>', 0)
-                ->decrement('stock');
+                ->where('flash_stock', '>', 0)
+                ->decrement('flash_stock');
 
-            if ($affectedRows === 0) {
-                throw new \Exception("Database inventory depletion for product {$this->productId}");
+            if ($affectedRows > 0) {
+                Order::where('id', $this->orderId)->update(['status' => 'completed']);
+                return true;
             }
 
-
-
-            Order::where('id', $this->orderId)->update(['status' => 'completed']);
+            return false;
         });
+
+        if (!$stockWasDecremented) {
+            Log::info("Graceful checkout rejection: Stock depleted in database", [
+                'tenant_id' => $this->tenantId,
+                'product_id' => $this->productId,
+                'order_id' => $this->orderId
+            ]);
+
+            Order::where('id', $this->orderId)->update([
+                'status' => 'failed',
+                'failure_reason' => 'out_of_stock'
+            ]);
+
+            Redis::set("tenant:{$this->tenantId}:product:{$this->productId}:flash_stock", 0);
+
+            return;
+        }
     }
 
     public function failed(\Throwable $exception): void

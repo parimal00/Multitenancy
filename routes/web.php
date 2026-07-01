@@ -13,6 +13,7 @@ use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 use Spatie\Multitenancy\Models\Tenant;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Middleware\SwitchToTenantDatabase;
+use App\Http\Controllers\FlashSaleSimulationController;
 
 // use Illuminate\Support\Facades\Artisan;
 // use Spatie\Multitenancy\Models\Tenant;
@@ -23,6 +24,8 @@ use App\Http\Middleware\SwitchToTenantDatabase;
 //     'tenant_record_exists' => \Spatie\Multitenancy\Models\Tenant::where('domain', request()->getHost())->exists(),
 //     'all_registered_domains' => Tenant::pluck('domain')->toArray(),
 // ]);
+
+// Redis::flushall();
 
 Route::inertia('/', 'welcome')->name('home');
 
@@ -60,6 +63,9 @@ Route::middleware([
 
 
 
+// Portfolio Dashboard Architecture Routes
+Route::get('/developer/flash-sale-dashboard', [FlashSaleSimulationController::class, 'index'])->name('simulation.dashboard');
+Route::post('/developer/flash-sale-dashboard/run', [FlashSaleSimulationController::class, 'execute'])->name('simulation.run');
 
 
 require __DIR__ . '/settings.php';

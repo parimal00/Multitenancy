@@ -20,8 +20,6 @@ class FlashSaleController extends Controller
 
         $remainingStock = Redis::decrby($redisStockKey, 1);
 
-        $remainingStock = 20;
-
         if ($remainingStock < 0) {
             Redis::incrby($redisStockKey, 1);
 

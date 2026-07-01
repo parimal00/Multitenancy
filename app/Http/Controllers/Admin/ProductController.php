@@ -53,8 +53,6 @@ class ProductController extends Controller
                     Redis::set($redisKey, $realTimeStock);
                 }
 
-                $realTimeStock = 20;
-
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
@@ -70,30 +68,16 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Authorize the user (Simple check for now, can be moved to middleware)
-        if (!auth()->user() || !auth()->user()->is_admin) {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
+        $validated = $request->validated();
 
-        // 2. Validate incoming product data
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'price_cents' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'is_flash_sale' => 'boolean',
-            'flash_sale_stock' => 'required_if:is_flash_sale,true|integer|min:0',
-        ]);
-
-        // 3. Persist to MySQL under the current tenant context
         $product = Product::create([
             'name' => $validated['name'],
             'price_cents' => $validated['price_cents'],
             'stock' => $validated['stock'],
             'is_flash_sale' => $validated['is_flash_sale'] ?? false,
-            'flash_sale_stock' => $validated['is_flash_sale'] ? $validated['flash_sale_stock'] : 0,
+            'flash_sale_stock' => ($validated['is_flash_sale'] ?? false) ? $validated['flash_sale_stock'] : 0,
         ]);
 
-        // 4. STRATEGY 1: If it's a flash sale, prime the high-speed Redis memory buffer instantly
         if ($product->is_flash_sale) {
             $tenantId = app('currentTenant')->id;
             $redisStockKey = "tenant:{$tenantId}:product:{$product->id}:stock";
